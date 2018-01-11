@@ -77,7 +77,8 @@ def processRequest(req):
                   'namespace': '0', 'limit': '1', 'redirects':'resolve', 'warningsaserror':'1', 'utf8': '1'}
         yql_url = baseurl + urlencode(wiki_query) + "&" + query
         result = urlopen(yql_url).read().decode("utf8")
-        res = get_title(result)
+        title = get_title(result)
+        res = get_answer(title)
     else:
         return {}
  
