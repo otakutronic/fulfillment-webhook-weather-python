@@ -21,9 +21,12 @@ install_aliases()
 from urllib.parse import urlparse, urlencode
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
+import requests
+from xml.dom import minidom
 
 import json
 import os
+import re
 
 from flask import Flask
 from flask import request
@@ -64,11 +67,27 @@ def processRequest(req):
         result = urlopen(baseurl).read()
         data = json.loads(result)
         res = makeWebhookResultForGetJoke(data)
+    elif req.get("result").get("action")=="WikipediaSearch":
+        baseurl = "https://en.wikipedia.org/w/api.php?"
+        yql_query = makeYqlQuery(req)
+        if yql_query is None:
+           return {}
+        query = urlencode({'search': yql_query})
+        wiki_query = {'action':'opensearch', 'format': 'xml',
+                  'namespace': '0', 'limit': '1', 'redirects':'resolve', 'warningsaserror':'1', 'utf8': '1'}
+        yql_url = baseurl + urlencode(wiki_query) + "&" + query
+        result = urlopen(yql_url).read().decode("utf8")
+        res = get_title(result)
     else:
         return {}
  
     return res
 
+def get_title(data):
+    xmldoc = minidom.parseString(data)
+    url = xmldoc.getElementsByTagName('Text')[0].childNodes[0].data
+    title = url
+    return title
 
 def makeYqlQuery(req):
     result = req.get("result")
