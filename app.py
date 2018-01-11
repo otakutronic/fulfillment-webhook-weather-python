@@ -69,7 +69,7 @@ def processRequest(req):
         res = makeWebhookResultForGetJoke(data)
     elif req.get("result").get("action")=="WikipediaSearch":
         baseurl = "https://en.wikipedia.org/w/api.php?"
-        yql_query = makeYqlQuery(req)
+        yql_query = makeYqlQueryWiki(req)
         if yql_query is None:
            return {}
         query = urlencode({'search': yql_query})
@@ -89,6 +89,16 @@ def get_title(data):
     title = url
     return title
 
+def makeYqlQueryWiki(req):
+    result = req.get("result")
+    parameters = result.get("parameters")
+    query = parameters.get("phrase")
+    if query is None:
+        return None
+    print ('QUERY' + query)
+    return query
+
+
 def makeYqlQuery(req):
     result = req.get("result")
     parameters = result.get("parameters")
@@ -97,6 +107,36 @@ def makeYqlQuery(req):
         return None
 
     return "select * from weather.forecast where woeid in (select woeid from geo.places(1) where text='" + city + "')"
+
+def get_answer(title):
+    baseurl = "https://en.wikipedia.org/w/api.php?"
+
+    query = title.strip().replace(" ", "+")
+    wiki_query = {'action':'query', 'format': 'xml', 'prop': 'extracts',
+                  'list': '', 'redirects': '1', 'exintro': '', 'explaintext': ''}
+    yql_url = baseurl + urlencode(wiki_query) + "&titles=" + query
+    print ("ANSWER URL = " + yql_url)
+    result = requests.get(yql_url).text
+    print ("RESULT:\n" + result)
+    res = makeWebhookResultForWiki(result)
+    return res
+
+def makeWebhookResultForWiki(data):
+    xmldoc = minidom.parseString(data)
+    extract = xmldoc.getElementsByTagName('extract')[0].childNodes[0].data
+
+    speech = extract
+
+    print("Response:")
+    print(speech)
+
+    return {
+        "speech": speech,
+        "displayText": speech,
+        # "data": data,
+        # "contextOut": [],
+        "source": "apiai-wikipedia-webhook"
+    }
 
 def makeWebhookResultForGetJoke(data):
     valueString = data.get('value')
